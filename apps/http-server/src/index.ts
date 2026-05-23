@@ -1,7 +1,9 @@
 import express from "express";
 import bcrypt from "bcrypt";
-import { client } from "@repo/prisma/client";
+import { client } from "@repo/db/client";
 import { safeSignUpSchema, safeSignInSchema } from "@repo/common/types";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET_KEY } from "@repo/backend-common/config";
 
 const app = express();
 app.use(express.json());
@@ -15,7 +17,7 @@ app.post('/signup', async (req, res) => {
             // errors: flattenError(parsedBody.error).
         })
     }
-    const {username, email, password } = parsedBody.data
+    const {username, email, password, photo } = parsedBody.data
     const hashedPassword = await bcrypt.hash(password, 5)
 
     try{
@@ -23,7 +25,8 @@ app.post('/signup', async (req, res) => {
             data : {
                 username: username,
                 email: email,
-                password: hashedPassword
+                password: hashedPassword,
+                photo: photo
             }
         })
     }catch(err){
@@ -38,6 +41,46 @@ app.post('/signup', async (req, res) => {
     
 })
 
+app.post('/signin', async (req, res) => {
+    const parsedBody = safeSignInSchema.safeParse(req.body)
+    if(!parsedBody.success){
+        return res.json({
+            message: "Invalid format",
+            // errors: flattenError(parsedBody.error).
+        })
+    }
+    const {email, password } = parsedBody.data
+
+    const userFound = await client.user.findFirst({
+        where: {
+            email: email
+        }
+    })
+
+    if(!userFound){
+        return res.json({
+            message: "User doesn't exists!!"
+        })
+    }
+
+    const passwordMatch = await bcrypt.compare(password, userFound.password)
+    if(!passwordMatch){
+        return res.json({
+            message: "Invalid Credentials! Plz try again..."
+        })
+    }
+
+    const token = await jwt.sign({
+        userId: userFound.id
+    }, JWT_SECRET_KEY )        
+
+    
+    return res.json({
+        message: "User signed in successfully!",
+        token: token
+    })
+    
+})
 
 
 app.listen(3000, () => {
