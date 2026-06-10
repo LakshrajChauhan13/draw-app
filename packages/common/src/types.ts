@@ -22,5 +22,10 @@ export const safeSignInSchema = z.object({
         .regex(/[0-9]/, "Password must contain at least one number")
 })
 
+export const roomSlugSchema = z.object({
+    slug: z.string()
+        .min(8, "slug should be atleast 8 characters")
+        .max(15, "slug must be under 15 characters")
+})
 
-// export const f = flattenError()
+export const flatten_Error = flattenError;
