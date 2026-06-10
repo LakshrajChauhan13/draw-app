@@ -14,6 +14,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@repo/db": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@repo/backend-common": "workspace:*",
     "@types/jsonwebtoken": "^9.0.10",
