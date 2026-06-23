@@ -8,7 +8,7 @@ import { userMiddleware } from "./middleware/user.middleware";
 
 const app = express();
 app.use(express.json());
-app.use(express.urlencoded());
+app.use(express.urlencoded({ extended: true }));
 
 app.post('/signup', async (req, res) => {
     const parsedBody = safeSignUpSchema.safeParse(req.body)
@@ -155,6 +155,41 @@ app.get('/room/chats/:roomId', userMiddleware, async (req, res) => {
     }
 })
 
-app.listen(3000, () => {
-    console.log('server is running on the port 3000')
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Async Rejection at:', promise, 'reason:', reason);
 });
+
+
+async function startServer() {
+    // const PORT = 3000;
+    let connected = false;
+    let retries = 5;
+
+    console.log("Initiating Express server pre-flight handshake context...");
+
+    while (!connected && retries > 0) {
+        try {
+            // $connect() wakes up the Postgres server without making a database query table search
+            await client.$connect();
+            connected = true;
+            console.log("🔌 Database link secured successfully! Neon compute engine is awake.");
+        } catch (err) {
+            retries--;
+            console.warn(`⏳ Neon DB is waking up. Retries remaining: ${retries}. Waiting 2.5 seconds...`);
+            // Wait 2.5 seconds before attempting another database handshake
+            await new Promise((resolve) => setTimeout(resolve, 2500));
+        }
+    }
+
+    if (!connected) {
+        console.error("❌ Critical Failure: Could not establish a connection to Neon DB. Terminating process.");
+        process.exit(1);
+    }
+
+    // Bind Express to port 3000 only after database confirmation is complete
+    app.listen(3000, () => {
+        console.log(`🚀 HTTP Server is fully operational on port 3000`);
+    });
+}
+
+startServer()
