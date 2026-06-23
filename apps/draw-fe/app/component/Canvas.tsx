@@ -1,8 +1,12 @@
 "use client";
 
-import { clearCanvas, draw, Shapes } from "@/draw";
-import { useEffect, useRef } from "react";
+import { renderCanvas, draw, Shapes } from "@/draw";
+import { cn } from "@/utils/cn";
+import { useEffect, useRef, useState } from "react";
 import { ReadyState, SendMessage } from "react-use-websocket";
+import { CircleIcon, LineIcon, RectIcon } from "@/icons/icons";
+
+export type ShapeType = "rect" | "line" | "circle";
 
 export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes }: {
     roomId: number;
@@ -11,37 +15,70 @@ export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes }: 
     gotExistingShapes: Shapes[];
 }) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const collaboratorPreviewRef = useRef<Shapes | null>(null)
+    const [currentTool, setCurrentTool] = useState<ShapeType>('rect')                         // const currentToolRef = useRef<ShapeType>("rect")
         
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) {
             return;
         }
-        const initDraw = draw(canvas, sendMessage, gotExistingShapes);
         sendMessage(JSON.stringify({
             type: "join",
             payload: {
                 roomId: roomId
             }
         }))
+        const initDraw = draw(canvas, sendMessage, gotExistingShapes, currentTool);
         return initDraw;    //clean up function
-    }, []);
+    }, [roomId, currentTool]);
 
     useEffect(() => {
         if(!lastMessage || !canvasRef.current) return;
         const data = JSON.parse(lastMessage.data);
-
-        if(data.type === 'received' && data.payload.drawing){
-            gotExistingShapes.push(data.payload.drawing);
-        }
         const ctx = canvasRef.current?.getContext("2d")!
-        clearCanvas(ctx, canvasRef.current, gotExistingShapes )
-    },[lastMessage])
+        try{
+            if(data.type === 'received' && data.payload.drawing){
+                gotExistingShapes.push(data.payload.drawing);
+                renderCanvas(ctx, canvasRef.current, gotExistingShapes, collaboratorPreviewRef.current);
+            }
 
-const buttonStyles = "px-4 py-2 border ";
+            if(data.type === 'live-preview-update' && data.payload.previewShape){
+                collaboratorPreviewRef.current = data.payload.previewShape;
+                renderCanvas(ctx, canvasRef.current, gotExistingShapes, collaboratorPreviewRef.current);
+            }
+
+            if(data.type === 'clear-live-preview'){
+                collaboratorPreviewRef.current = null;
+                renderCanvas(ctx, canvasRef.current, gotExistingShapes, collaboratorPreviewRef.current);
+            }
+            
+        }catch(error){
+            console.error("Payload synchronization error exception:", error);
+        }
+
+    },[lastMessage, gotExistingShapes])
+
+    const buttonStyles: string = "text-xs bg-neutral-500/50 text-neutral-400 px-2 py-1.5 rounded cursor-pointer  border-1 border-neutral-500/50  active:bg-neutral-500 active hover:text-neutral-200 hover:border-white active:scale-95 transition-all duration-75 ";
+    const buttonActiveState = 'border-white text-neutral-200 bg-neutral-500 '
+    
   return (
     <>
-      <canvas ref={canvasRef} width={1660} height={1080}></canvas>
+      <div className={`relative`}>
+        <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight} className="absolute"></canvas>
+        <div className="flex gap-2 absolute top-2 left-1/2 -translate-x-1/2 px-4 py-3 bg-neutral-900 rounded " >
+            <button onClick={ () => { setCurrentTool('circle') }} className={cn(` ${buttonStyles} ${currentTool === 'circle' && buttonActiveState } `)}>
+                <CircleIcon />
+            </button>
+            <button onClick={ () => { setCurrentTool('line') }} className={cn(` ${buttonStyles} ${currentTool === 'line' && buttonActiveState } `)}>
+                <LineIcon />
+            </button>
+            <button onClick={ () => { setCurrentTool('rect') }} className={cn(` ${buttonStyles} ${currentTool === 'rect' && buttonActiveState } `)}>
+                <RectIcon />
+            </button>
+            
+        </div>
+      </div>
     </>
   );
 }
