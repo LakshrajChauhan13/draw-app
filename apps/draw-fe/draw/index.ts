@@ -1,4 +1,5 @@
 import { ShapeType } from "@/app/component/Canvas"
+import { RefObject } from "react"
 import { SendMessage } from "react-use-websocket"
 
 export type Shapes = {
@@ -19,13 +20,19 @@ export type Shapes = {
     startY: number,
     endX: number,
     endY: number
+} | {
+    type: "triangle",
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number
 }
 
 export function draw(
     canvas: HTMLCanvasElement, 
     sendMessage: SendMessage, 
     gotExistingShapes: Shapes[],
-    currentTool: ShapeType 
+    currentToolRef: RefObject<ShapeType> 
     ) {
         const existingShapes: Shapes[] = gotExistingShapes;
         const ctx = canvas.getContext("2d");
@@ -61,6 +68,7 @@ export function draw(
             const coords = getLocalCoordinates(e);
             const width  = coords.x - startX; 
             const height = coords.y - startY;
+            const currentTool = currentToolRef.current;
             let shape: Shapes
             
             switch (currentTool) {
@@ -75,7 +83,6 @@ export function draw(
                     break;
 
                 case "circle": 
-                    const radius = Math.sqrt(Math.pow(coords.x - startX, 2) + Math.pow(coords.y - startY, 2));
                     shape = {
                         type: "circle",
                         startX: startX,
@@ -88,6 +95,16 @@ export function draw(
                 case "line": 
                     shape = {
                         type: "line",
+                        startX: startX,
+                        startY: startY,
+                        endX: coords.x,
+                        endY: coords.y,
+                    }
+                    break;
+
+                case "triangle": 
+                    shape = {
+                        type: "triangle",
                         startX: startX,
                         startY: startY,
                         endX: coords.x,
@@ -112,10 +129,11 @@ export function draw(
                 const coords = getLocalCoordinates(e);
                 const width =  coords.x - startX;
                 const height =  coords.y - startY;
+                const currentTool = currentToolRef.current;
 
                 let localPreview: Shapes;
                 
-            switch (currentTool){
+                switch (currentTool){
                 case "rect": 
                     localPreview = {
                         type: "rect",
@@ -146,7 +164,18 @@ export function draw(
                         endY: coords.y
                     }
                     break;
+
+                case "triangle": 
+                    localPreview = {
+                        type: "triangle",
+                        startX: startX,
+                        startY: startY,
+                        endX: coords.x,
+                        endY: coords.y
+                    }
+                    break;
             }
+
             renderCanvas(ctx, canvas, existingShapes, localPreview);
             ctx.strokeStyle = "rgba(255, 255, 255)"
             // ctx?.strokeRect(startX, startY, width, height);
@@ -181,7 +210,8 @@ export function renderCanvas(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEl
         ctx.strokeStyle = "rgba(255, 255, 255)";
         if(shape.type === 'rect'){
             ctx.strokeRect(shape.startX, shape.startY, shape.width, shape.height);
-        }else if(shape.type === 'circle'){
+        }
+        else if(shape.type === 'circle'){
             const width = shape.endX - shape.startX;
             const height = shape.endY - shape.startY;
             const centreX = (shape.startX + shape.endX) / 2;
@@ -192,38 +222,58 @@ export function renderCanvas(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEl
             ctx.beginPath();
             ctx.ellipse(centreX, centreY, radiusX, radiusY, 0, 0, Math.PI * 2 );
             ctx.stroke()
-        }else{
+        }
+        else if(shape.type === 'line'){
             ctx.beginPath();
             ctx.moveTo(shape.startX, shape.startY);
             ctx.lineTo(shape.endX, shape.endY);
             ctx.stroke()
         }
+        else {                      //
+            drawTrianglePath(ctx, shape.startX, shape.startY, shape.endX, shape.endY)
+        }
     })
 
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.8)"; // Highlight with Excalidraw blue color matching drag vectors
-    ctx.setLineDash([6, 6]); // Use dashed layout outline to signal ongoing actions
+    ctx.strokeStyle = "rgba(59, 130, 246, 0.8)"; // for higlighting the ongoing action
+    ctx.setLineDash([6, 6]); // using dashed layout outline to signal ongoing actions
     
-    if (activePreview && activePreview.type === 'rect') {
-        ctx.strokeRect(activePreview.startX, activePreview.startY, activePreview.width, activePreview.height);
+    if(activePreview) {
+        if (activePreview.type === 'rect') {
+            ctx.strokeRect(activePreview.startX, activePreview.startY, activePreview.width, activePreview.height);
     }
-    else if (activePreview && activePreview.type === 'circle') {
+    else if (activePreview.type === 'circle') {
         const width = activePreview.endX - activePreview.startX;
         const height = activePreview.endY - activePreview.startY;
         const centreX = (activePreview.startX + activePreview.endX) / 2;
         const centreY = (activePreview.startY + activePreview.endY) / 2;
         const radiusX = Math.abs(width) / 2;
         const radiusY = Math.abs(height) / 2
-    
+        
         ctx.beginPath();
         ctx.ellipse(centreX, centreY, radiusX, radiusY, 0, 0, Math.PI * 2 );
         ctx.stroke();
     }
-    if (activePreview && activePreview.type === 'line') {
+    else if (activePreview.type === 'line') {
         ctx.beginPath();
         ctx.moveTo(activePreview.startX, activePreview.startY);
         ctx.lineTo(activePreview.endX, activePreview.endY);
         ctx.stroke();
     }
-    
+    else{
+        drawTrianglePath(ctx, activePreview?.startX, activePreview?.startY, activePreview?.endX, activePreview?.endY)
+    }
+}
     ctx.setLineDash([]); // Reset line style settings
+}
+
+function drawTrianglePath(ctx: CanvasRenderingContext2D, startX: number, startY: number, endX: number, endY: number) {
+    const topX = (startX + endX) / 2;
+    const topY = startY;
+    
+    ctx.beginPath();
+    ctx.moveTo(topX, topY);       // Top peak
+    ctx.lineTo(endX, endY);       // Bottom Right
+    ctx.lineTo(startX, endY);     // Bottom Left
+    ctx.closePath();              // Back to Top peak
+    ctx.stroke();
 }
