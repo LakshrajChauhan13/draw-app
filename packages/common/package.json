@@ -7,10 +7,17 @@
     "build": "tsc -b"
   },
   "exports": {
+".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
     "./types": {
-        "require": "./dist/types.js",
-        "types": "./dist/types.d.ts"
-  } 
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "require": "./dist/types.js",
+      "default": "./dist/types.js"
+    }
   },
   "keywords": [],
   "author": "",
