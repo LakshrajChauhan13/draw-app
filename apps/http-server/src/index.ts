@@ -5,15 +5,20 @@ import { safeSignUpSchema, safeSignInSchema, roomSlugSchema, flatten_Error } fro
 import jwt from "jsonwebtoken";
 import { JWT_SECRET_KEY } from "@repo/backend-common/config";
 import { userMiddleware } from "./middleware/user.middleware";
+import cors from "cors"
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+    origin: "http://localhost:3002",
+    credentials: true
+}))
 
 app.post('/signup', async (req, res) => {
     const parsedBody = safeSignUpSchema.safeParse(req.body)
     if(!parsedBody.success){
-        return res.json({
+        return res.status(400).json({
             message: "Invalid format",
             errors: flatten_Error(parsedBody.error).fieldErrors
         })
@@ -27,7 +32,6 @@ app.post('/signup', async (req, res) => {
                 username: username,
                 email: email,
                 password: hashedPassword,
-                photo: photo
             }
         })
     }catch(err){
@@ -45,7 +49,7 @@ app.post('/signup', async (req, res) => {
 app.post('/signin', async (req, res) => {
     const parsedBody = safeSignInSchema.safeParse(req.body)
     if(!parsedBody.success){
-        return res.json({
+        return res.status(400).json({
             message: "Invalid format",
             errors: flatten_Error(parsedBody.error).fieldErrors
         })
@@ -89,7 +93,7 @@ app.post('/room', userMiddleware, async (req, res) => {
 
     if(!parsedBody.success){
         console.log(parsedBody.error);
-        return res.json({
+        return res.status(400).json({
             message: "Invalid format",
             error: flatten_Error(parsedBody.error).fieldErrors
         })
@@ -104,7 +108,7 @@ app.post('/room', userMiddleware, async (req, res) => {
         })
         
         return res.status(201).json({
-            message: `room created `,
+            message: `Room created!`,
             roomName: slug,
             roomId: response.id
         })
@@ -153,6 +157,57 @@ app.get('/room/chats/:roomId', userMiddleware, async (req, res) => {
             message: "Failed to fetch chats, try again later!"
         })
     }
+
+})
+
+app.get('/all/rooms', userMiddleware, async (req, res) => {
+    const userId = req.id;
+
+    try {
+        const rooms = await client.room.findMany({
+            where: {
+                adminId: userId
+            },
+        select: {
+            id: true,
+            slug: true,
+            createdAt: true,
+            _count: {
+                select : {
+                    members: true
+                }
+            }
+        }
+        })
+
+        const user = await client.user.findFirst({
+            where: {
+                id: userId
+            },
+            select: {
+                username: true,
+                email: true  
+            }
+        })
+    
+        return res.json({
+            rooms: rooms,
+            user: user
+        })
+    }catch (err) {
+        console.error("Failed to fetch rooms:", err);
+        
+        if (err instanceof Prisma.PrismaClientInitializationError) {
+            return res.status(503).json({
+                message: "Database unavailable, try again later!"
+            });
+        }
+        
+        return res.status(500).json({
+            message: "Failed to fetch your rooms due to an internal server error."
+        });
+    }
+    
 })
 
 process.on('unhandledRejection', (reason, promise) => {

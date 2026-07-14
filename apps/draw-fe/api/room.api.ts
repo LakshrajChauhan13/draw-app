@@ -18,24 +18,41 @@ export async function userSignInApi( email: string, password: string ){
 }
 
 export async function createRoomApi(slug: string){
+    const token = localStorage.getItem('token')
     const response = await axiosTnstance.post('/room', {
-        slug: slug
+        slug: slug,
+    }, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
     });
     return response.data;
 }
 
 export async function getExistingShapes(roomId: number){
+    const token = localStorage.getItem('token')
     const response = await axiosTnstance.get(`/room/chats/${roomId}`, {
-        headers: {
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzMjc1YWIwOS0zZjlkLTRjYjUtODQ3YS1mZWRiMDcxMjBkNGUiLCJpYXQiOjE3ODEwNDEyNjR9.dXWGUWQjmAHD0AlzFU5x0jSEhRzQljgIj58dctEHPRg`
+        headers: {                                                              // hardcoded the token for now
+            Authorization: `Bearer ${token}`
         }
     });
+    
     const messages = response.data.messages;
-
     const shapes = messages.map((x : { message: string }) => {
         const message = JSON.parse(x.message)
         return message;
     })
 
     return shapes;
+}
+
+export async function getAllRoomsApi() {
+    const token = localStorage.getItem('token')
+    const response = await axiosTnstance.get('/all/rooms', {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    })
+
+    return response.data;
 }
