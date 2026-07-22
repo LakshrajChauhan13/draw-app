@@ -2,18 +2,11 @@
 
 import BrandName from '../component/BrandName'
 import { Button } from '@/components/ui/button'
-import { PlusIcon, ShareIcon } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { cn } from '@/utils/cn'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { DeleteIcon } from '@/icons/icons'
 import { useQuery } from '@tanstack/react-query'
 import { getAllRoomsApi } from '@/api/room.api'
-import { useEffect, useState } from 'react';
 import NewCanvasCard from '../component/NewCanvasCard';
 import CardCanvas from '../component/CardCanvas';
+import JoinCanvasCard from '../component/JoinCanvasCard';
 
 interface RoomDataInterface{
   id: string,
@@ -49,12 +42,6 @@ const DashBoard = () => {
   
   return (
     <>
-    { isLoading ? 
-      <div>
-        Loading..
-      </div> : 
-    
-    
     <div className='min-h-screen flex flex-col selection:bg-muted'>
       <nav className='h-15 w-full bg-background text-accent border-b-2 border-dashed '>
         <div className='max-w-7xl h-full flex justify-between items-center  mx-auto'>
@@ -71,7 +58,7 @@ const DashBoard = () => {
         </div>        
       </nav>
       
-      <div className=' flex flex-col gap-5 px-20 py-10  w-screen flex-1 max-w-7xl mx-auto border-x-2 border-dashed'>
+      <div className='flex flex-col gap-5 px-20 py-10  w-screen flex-1 max-w-7xl mx-auto border-x-2 border-dashed'>
 
         <div className=' flex flex-col justify-start gap-'>
           <h1 className='text-2xl font-semibold tracking-tighter '>
@@ -84,58 +71,21 @@ const DashBoard = () => {
 
         <div className='w-full border-dashed border' />
 
-        <div className='grid grid-cols-3 gap-2'>
+        <div className='w-full h-50 grid grid-cols-2 gap-2'>
+          <NewCanvasCard />
+          <JoinCanvasCard />
+        </div>
+        <div className='grid grid-cols-3 gap-2 mt-5'>
         
-        <NewCanvasCard />
-
         { 
-          roomsList && roomsList.map((roomData) => <CardCanvas key={roomData.id} slug={roomData.slug} createdAt={roomData.createdAt} /> )  
+          roomsList && roomsList.map((roomData) => <CardCanvas key={roomData.id} id={roomData.id} slug={roomData.slug} createdAt={roomData.createdAt} /> )  
         }
 
-        {/* <Card className='h-50 hover:bg-accent group relative'>
-          <CardHeader>
-            <CardTitle className=' leading-[1.428571] flex justify-between items-center'>
-              <h1>
-                Room Name
-              </h1>
-              <Button variant={'secondary'} className={'  hover:text-red-500 text-red-500/50 hover:bg-accent'}  >
-                <DeleteIcon />
-              </Button>
-            </CardTitle>
-            <CardDescription className='text-muted-foreground text-xs'>
-              Created 20 June 2026
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className='text-muted-foreground italic'>
-            system designs, approaching the systems with the first fundamentals.
-            Diagrams of the systems.
-          </CardContent>
-
-          <CardFooter className='absolute w-full opacity-0 group-hover:opacity-100 transition-opacity duration-75 bottom-0 flex justify-start items-center gap-2'>
-            <Button 
-              size={'sm'}
-              variant={'secondary'}
-            >
-              Open
-            </Button>
-            <Button 
-              size={'sm'}
-              variant={'secondary'}
-            >
-              Share
-              <ShareIcon /> 
-            </Button>
-          </CardFooter>
-        </Card> */}
-        
-        
         </div>
         
       </div>
 
     </div>
-  }
     </>
   )
 }
