@@ -5,11 +5,13 @@ import { ReadyState } from "react-use-websocket";
 import { Canvas } from "./Canvas";
 import { Shapes } from "@/draw";
 
-export function RoomCanvas({ roomId, gotExistingShapes }: {roomId: number, gotExistingShapes: Shapes[]}){
+export type AccessMode = 'PRIVATE' | 'PUBLIC_VIEW' | 'PUBLIC_EDIT';
+
+export function RoomCanvas({ roomId, gotExistingShapes, accessMode, admin }: {roomId: string, gotExistingShapes: Shapes[], accessMode: AccessMode, admin: boolean}){
         const {sendMessage, lastMessage, readyState, connectionStatus} = useGlobalWebSocket();
         
         if(readyState === ReadyState.OPEN){
-            return <Canvas roomId={roomId} sendMessage={sendMessage} lastMessage={lastMessage} gotExistingShapes={gotExistingShapes} />
+            return <Canvas roomId={roomId} sendMessage={sendMessage} lastMessage={lastMessage} gotExistingShapes={gotExistingShapes} accessMode={accessMode} admin={admin} />
         }
         else if(readyState === ReadyState.CONNECTING){
             return (

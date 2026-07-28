@@ -32,7 +32,8 @@ export function draw(
     canvas: HTMLCanvasElement, 
     sendMessage: SendMessage, 
     gotExistingShapes: Shapes[],
-    currentToolRef: RefObject<ShapeType> 
+    currentToolRef: RefObject<ShapeType>, 
+    isReadOnly: boolean
     ) {
         const existingShapes: Shapes[] = gotExistingShapes;
         const ctx = canvas.getContext("2d");
@@ -51,7 +52,11 @@ export function draw(
         };
                 
         renderCanvas(ctx, canvas, existingShapes, null)
-            
+        
+        if(isReadOnly){
+            return () => {}
+        }
+
         let clicked = false;
         let startX = 0;
         let startY = 0;
@@ -145,7 +150,6 @@ export function draw(
                     break;
 
                 case "circle": 
-                    const radius = Math.sqrt(Math.pow(coords.x - startX, 2) + Math.pow(coords.y - startY, 2));
                     localPreview = {
                         type: "circle",
                         startX: startX,

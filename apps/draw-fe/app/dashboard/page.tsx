@@ -7,12 +7,15 @@ import { getAllRoomsApi } from '@/api/room.api'
 import NewCanvasCard from '../component/NewCanvasCard';
 import CardCanvas from '../component/CardCanvas';
 import JoinCanvasCard from '../component/JoinCanvasCard';
+import { AccessMode } from '../component/RoomCanvas';
 
-interface RoomDataInterface{
+export interface RoomDataInterface{
   id: string,
   slug: string,
-  createdAt: string
+  createdAt: string,
+  accessMode: AccessMode 
 }
+
 
 const DashBoard = () => {
   const { data, isLoading, error } = useQuery({
@@ -78,7 +81,7 @@ const DashBoard = () => {
         <div className='grid grid-cols-3 gap-2 mt-5'>
         
         { 
-          roomsList && roomsList.map((roomData) => <CardCanvas key={roomData.id} id={roomData.id} slug={roomData.slug} createdAt={roomData.createdAt} /> )  
+          roomsList && roomsList.map((roomData) => <CardCanvas key={roomData.id} id={roomData.id} slug={roomData.slug} createdAt={roomData.createdAt} accessMode={roomData.accessMode} /> )  
         }
 
         </div>
