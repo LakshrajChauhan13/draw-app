@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { userSignInApi } from "@/api/room.api"
 import { toast } from "sonner"
@@ -33,9 +32,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
 
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const router = useRouter()
+  const router = useRouter();
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm<SafeSignInSchemaType>({
       resolver: zodResolver(safeSignInSchema)
@@ -48,7 +45,8 @@ export function LoginForm({
         return { id }
       },
       onSuccess: (data, variables, context) => {
-        localStorage.setItem("token", data.token)           //
+        // localStorage.setItem("token", data.token)           //
+        document.cookie = `wsToken=${data.token}; path=/; max-age=604800; sameSite=lax`;
         const message = data.message || "Signed In Successfully"
         toast.dismiss(context.id);
         toast.success(message);
@@ -56,7 +54,8 @@ export function LoginForm({
         router.push('/dashboard')
       },
       onError: (error: AxiosError<ErrorMessage>, variables, context) => {
-        localStorage.removeItem("token")
+        // localStorage.removeItem("token")
+        document.cookie = `wsToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;`
         const message = error.response?.data.message || 'Failed to Sign in.'
         toast.dismiss(context!.id);
         toast.error(message);

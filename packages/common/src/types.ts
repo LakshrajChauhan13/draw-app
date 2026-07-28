@@ -25,11 +25,19 @@ export const safeSignInSchema = z.object({
 export const roomSlugSchema = z.object({
     slug: z.string()
         .min(8, "slug should be atleast 8 characters")
-        .max(30, "slug must be under 30 characters")
+        .max(15, "slug must be under 15 characters")
 })
+
+export const updateAccessModeSchema = z.object({
+    accessMode: z.enum(
+        ["PRIVATE", "PUBLIC_VIEW", "PUBLIC_EDIT"], 
+        { message: "Invalid or missing access mode selected"}
+    )
+});
 
 export const flatten_Error = flattenError;
 export { z }
 export type safeSignUpSchemaType = z.infer<typeof safeSignUpSchema>
 export type SafeSignInSchemaType = z.infer<typeof safeSignInSchema>
 export type RoomSlugSchemaType = z.infer<typeof roomSlugSchema>
+export type updateAccessModeSchemaType = z.infer<typeof updateAccessModeSchema>

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, ReactNode, useContext } from "react"
+import { createContext, ReactNode, useContext, useEffect, useState } from "react"
 import useWebSocket, { ReadyState, SendMessage } from "react-use-websocket"
 
 interface WebSocketContextInterface {
@@ -13,8 +13,22 @@ interface WebSocketContextInterface {
 const webSocketContext = createContext<WebSocketContextInterface | null>(null)
 
 const WebSocketContextProvider = ({children} : { children: ReactNode}) => {
+    const [token, setToken] = useState<string | null>(null);
 
-    const { sendMessage, lastMessage, readyState } = useWebSocket("ws://localhost:8080", {
+    useEffect(() => {
+        const getCookie = (name: string): string | null => {
+            if (typeof window === "undefined") return null;
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+            return null;
+        };
+
+        setToken(getCookie('wsToken'));
+    }, []);
+        
+    
+    const { sendMessage, lastMessage, readyState } = useWebSocket( token ? `ws://localhost:8080?token=${token}` : `ws://localhost:8080`, {
         shouldReconnect: () => true
     })
 

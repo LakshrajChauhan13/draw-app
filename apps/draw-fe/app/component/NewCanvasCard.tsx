@@ -43,6 +43,7 @@ const NewCanvasCard = () => {
             toast.dismiss(context!.id)
             const message = error.response?.data.message || 'Error occurred !'
             toast.error(message)
+            console.log(error.response)
         }
     })
 
@@ -56,7 +57,7 @@ const NewCanvasCard = () => {
         <DialogTrigger>
           <div
             className={cn(
-              "h-50 rounded-xl border-2 border-dashed border-border",
+              "h-55 rounded-xl border-2 border-dashed border-border",
               "flex flex-col items-center justify-center gap-2",
               "text-muted-foreground cursor-pointer",
               "hover:border-primary/50 hover:bg-accent hover:text-foreground",
@@ -89,14 +90,14 @@ const NewCanvasCard = () => {
               autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              8-30 characters only.
+              8-15 characters only. ( and only string is allowed )
             </p>
           </div>
           <DialogFooter>
             <Button className={""} variant={"outline"} onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button className={""} variant={"default"} disabled={slug.trim().length < 8 || slug.trim().length > 30} onClick={() => handleCreate({ slug })}>
+            <Button className={""} variant={"default"} disabled={slug.trim().length < 8 || slug.trim().length > 15} onClick={() => handleCreate({ slug })}>
               Create
             </Button>
           </DialogFooter>
