@@ -23,7 +23,7 @@ interface RoomData {
     userId: Set <string>;
     clock: NodeJS.Timeout | undefined
 }
-const rooms = new Map<number, RoomData>();
+const rooms = new Map<string, RoomData>();
 
 async function startWebSocketServer(){
     let connected = false;
@@ -52,26 +52,28 @@ async function startWebSocketServer(){
 
     wss.on('connection', async (socket: WebSocket, request) => {
     const url = request.url;
-    
     const queryParams = new URLSearchParams(url?.split('?')[1]);
     const token = queryParams.get('token');
-    if(!token){
-        socket.close();
-        return ;
-    }
-    const userId = authenticateUser(token);
-    if(!userId){
-        socket.close();
-        return;
-    }
-    let currentRoomId: number | undefined ; 
+
+    const validUserId = token ? authenticateUser(token) : null;
+    const userId = validUserId || `guest_${Math.random().toString(36).substring(2, 9)}`
+    const isGuest = !validUserId ;
+    
+    // if(!userId){
+    //     guestId = `guest_${Math.random().toString(36).substring(2, 9)}`
+    //     // socket.close();
+    //     // return;
+    // }
+
+    let cachedUsername: string | undefined;
+    let currentRoomId: string | undefined ; 
+    let roomAdminId: string;
     
     socket.on('message', async (message) => {
-        // socket.send('heya authenticated person welcome');
         const data = JSON.parse(message.toString());
 
         if(data.type === 'join'){
-            const roomId = Number(data.payload.roomId);
+            const roomId = data.payload.roomId ;
             const roomIdExistsInDB = await client.room.findUnique({
                 where: {
                     id: roomId
@@ -80,16 +82,35 @@ async function startWebSocketServer(){
             if(!roomIdExistsInDB){
                 socket.send(JSON.stringify({
                     type: "error",
-                    message: "Room not found!! "
+                    message: "Room not found!"
                 }))
                 return
             }          
+
+            roomAdminId = roomIdExistsInDB.adminId;
             
             if(!rooms.has(roomId)){
                 rooms.set(roomId, { users: new Set(), userId: new Set(), clock: undefined})
             }
 
-            await handleJoin(socket, roomId, userId);
+            if(!cachedUsername){
+                if(!isGuest){
+                    const userData = await client.user.findFirst({
+                        where: {
+                            id: userId
+                        },
+                        select: {
+                            username: true,
+                            id: true
+                        }
+                    })
+                    cachedUsername = userData?.username || 'Authenticated User'
+                }else{
+                 cachedUsername = `Guest (${userId.slice(-4)})`;   
+                }
+            }
+
+            await handleJoin(socket, roomId, userId, cachedUsername);
             currentRoomId = roomId;
         }
 
@@ -114,7 +135,6 @@ async function startWebSocketServer(){
                     data: {
                         message: JSON.stringify(drawing),
                         roomId: currentRoomId,
-                        userId: userId,
                     }
                 })
             }
@@ -149,6 +169,25 @@ async function startWebSocketServer(){
                 });
             }
         }
+
+        if(data.type === 'access-mode-update'){
+            if(currentRoomId && rooms.has(currentRoomId)){
+                const newMode = data.payload.accessMode;
+                const room = rooms.get(currentRoomId);
+                console.log(newMode)
+                room?.users.forEach((clienSocket) => {
+                    if(clienSocket !== socket && clienSocket.readyState === WebSocket.OPEN){
+                        clienSocket.send(JSON.stringify({
+                            type: "access-mode-update",
+                            payload: {
+                                accessMode: newMode
+                            }
+                        }))
+                    }
+                })
+            }
+        }
+        
     })
 
     socket.on('close', async (message) => {
@@ -157,6 +196,14 @@ async function startWebSocketServer(){
             room.users.delete(socket);
             room.userId.delete(userId);
             console.log(`${userId} left the room`)
+            room.users.forEach(clientSocket => {
+                if( clientSocket.readyState === WebSocket.OPEN && clientSocket !== socket){
+                    clientSocket.send(JSON.stringify({
+                        type: "system",
+                        message: `${cachedUsername} has left the room`
+                    }))
+                }
+            })
             
             if(room.users.size === 0){
                 rooms.delete(currentRoomId);
@@ -167,9 +214,10 @@ async function startWebSocketServer(){
 })
 }
 
-async function handleJoin(socket: WebSocket, roomId: number, userId: string) {
+async function handleJoin(socket: WebSocket, roomId: string, userId: string, username: string) {
     const room = rooms.get(roomId);
     if (!room) return;
+    // console.log(username, "from handleJoin")
 
     const isAlreadyInRoom = room.users.has(socket);
 
@@ -181,29 +229,30 @@ async function handleJoin(socket: WebSocket, roomId: number, userId: string) {
         socket.send(JSON.stringify({
             type: 'error',
             payload: { roomId },
-            message: 'Room is full (Max 2 allowed)'
+            message: 'Room is full (Max 10 allowed)'
         }));
         return;
     }
     }
 
     socket.send(JSON.stringify({
-    type: "joined",
-    payload: { roomId },
-    roomUserCount: room.users.size
+        type: "joined",
+        payload: { roomId },
+        roomUserCount: room.users.size
     }));
 
     if (!isAlreadyInRoom) {
+        
     const systemObj = {
         type: 'system',
-        message: `${userId} has joined!`,
+        message: `${username} has joined!`,
         userId: userId,
         id: Math.random().toString(36).substring(2, 9),
         roomUserCount: room.users.size
     };
 
     room.users.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
+        if (client.readyState === WebSocket.OPEN && client !== socket) {
             client.send(JSON.stringify(systemObj));
         }
     });

@@ -1,15 +1,18 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import { client, Prisma } from "@repo/db/client";
-import { safeSignUpSchema, safeSignInSchema, roomSlugSchema, flatten_Error } from "@repo/common/types";
+import { safeSignUpSchema, safeSignInSchema, roomSlugSchema, flatten_Error, updateAccessModeSchema } from "@repo/common/types";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET_KEY } from "@repo/backend-common/config";
 import { userMiddleware } from "./middleware/user.middleware";
-import cors from "cors"
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import { OptionalAuthRequest, optionalUserMiddleware } from "./middleware/optional.user.middleware";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(cors({
     origin: "http://localhost:3002",
     credentials: true
@@ -75,10 +78,14 @@ app.post('/signin', async (req, res) => {
         })
     }
 
-    const token = await jwt.sign({
+    const token = jwt.sign({
         userId: userFound.id
-    }, JWT_SECRET_KEY )        
+    },  JWT_SECRET_KEY, 
+    {
+        expiresIn: "7d"
+    })        
 
+    res.cookie('accessToken', token)
     
     return res.json({
         message: "User signed in successfully!",
@@ -87,7 +94,7 @@ app.post('/signin', async (req, res) => {
     
 })
 
-app.post('/room', userMiddleware, async (req, res) => {
+app.post('/room', userMiddleware, async (req, res) => {                     // create a room
     const userId = req.id as string;
     const parsedBody = roomSlugSchema.safeParse(req.body)
 
@@ -135,8 +142,61 @@ app.post('/room', userMiddleware, async (req, res) => {
     }
 })
 
-app.get('/room/chats/:roomId', userMiddleware, async (req, res) => {
-    const roomId = Number(req.params.roomId);
+app.delete('/room/:id', userMiddleware, async (req, res) => {               // to delete a room
+    const roomId = req.params.id as string;
+    console.log(roomId, "inside the /room/:id ");
+    try {
+        const response = await client.room.delete({
+            where: {
+                id: roomId
+        }
+    })
+    return res.json({
+        message: 'Room has been deleted !'
+    })
+
+    }catch(err){
+        console.error(err)
+        if(err instanceof Prisma.PrismaClientInitializationError){
+            return res.status(503).json({
+                message: "Database unavailable, try again later!"
+            })
+        }
+        return res.status(500).json({
+            message: "Deletion failed, try again later!"
+        })
+    }
+})
+
+app.get('/room/chats/:roomId', optionalUserMiddleware, async (req: OptionalAuthRequest, res) => {        // get all the chats/shapes of the room
+    const roomId = req.params.roomId as string;
+    const userId = req.userId;
+
+    const room = await client.room.findUnique({
+        where: {
+            id: roomId
+        }, 
+        select: {
+            accessMode: true,
+            adminId: true
+        }
+    })
+
+    if(!room){
+        return res.status(401).json({
+            message: "Room not found"
+        })
+    }
+    
+    const isAdmin = userId === room?.adminId;
+    const isPrivate = room?.accessMode === 'PRIVATE';
+    
+    if(!isAdmin && isPrivate){
+        return res.status(403).json({
+            message: "This canvas is private. You must be the owner to view it."    
+        })
+    }
+``    
     try{
         const chats = await client.chat.findMany({
             where:{
@@ -144,7 +204,9 @@ app.get('/room/chats/:roomId', userMiddleware, async (req, res) => {
             }
     })
     return res.json({
-        messages: chats
+        messages: chats,
+        accessMode: room.accessMode,
+        admin: isAdmin
     })
     
     }catch(err){
@@ -160,7 +222,7 @@ app.get('/room/chats/:roomId', userMiddleware, async (req, res) => {
 
 })
 
-app.get('/all/rooms', userMiddleware, async (req, res) => {
+app.get('/all/rooms', userMiddleware, async (req, res) => {                 // get all rooms of the user
     const userId = req.id;
 
     try {
@@ -172,6 +234,7 @@ app.get('/all/rooms', userMiddleware, async (req, res) => {
             id: true,
             slug: true,
             createdAt: true,
+            accessMode: true,
             _count: {
                 select : {
                     members: true
@@ -208,6 +271,112 @@ app.get('/all/rooms', userMiddleware, async (req, res) => {
         });
     }
     
+})
+
+app.patch('/room/:roomId/access', userMiddleware, async (req, res) => {     
+    const cardCanvasId = req.params.roomId as string;
+    const userId = req.id;
+    
+    const parsedBody = updateAccessModeSchema.safeParse(req.body)
+    if(!parsedBody.success){
+        return res.status(400).json({
+            message: "Invalid format",
+            errors: flatten_Error(parsedBody.error).fieldErrors
+        })
+    }
+
+    const {accessMode} = parsedBody.data;
+
+    const room = await client.room.findUnique({
+        where: {
+            id: cardCanvasId
+        }, 
+        select: {
+            adminId: true
+        }
+    })
+
+    if(!room){
+        return res.json({
+            message: "Room not found"
+        })
+    }
+
+    const isAdmin = userId === room.adminId
+    
+    if(isAdmin){
+        try {
+            const response = await client.room.update({
+                where: {
+                    id: cardCanvasId
+                },
+                data: {
+                    accessMode: accessMode
+                }
+            })
+            
+            res.status(202).json({
+                message: "Access mode updated",
+                accessMode: accessMode
+            })
+        }catch(err){
+            console.log(" Error while updating the access mode for the room", err)
+            if( err instanceof Prisma.PrismaClientInitializationError){
+                return res.status(503).json({
+                    message: "Database unavailable, try again later!"
+                })
+            }
+
+            return res.status(500).json({
+                message: "Failed to update the room's access mode due to an internal server error"
+            })
+        }
+    }else{
+        return res.status(403).json({
+            message: "You must be the owner to update the access mode for this room."
+        })
+    }
+})
+
+app.get('/check/:roomId', async (req, res) => {                             // roomId exists or not 
+    const roomId = req.params.roomId;
+    try{
+        const response = await client.room.findFirst({
+            where: {
+                id: roomId
+            },
+            select: {
+                id: true,
+                slug: true
+           }
+        });
+
+        if(response){
+            return res.status(200).json({
+                exists: true,
+                message: 'Room exists !',
+                room: response
+            })
+        }
+
+        return res.status(404).json({
+            exists: false,
+            message: "Room doesn't exist, check your room ID.",
+            room: roomId
+        })
+    }catch(err){
+        console.error('Error checking room existence :-->', err)
+
+        if( err instanceof Prisma.PrismaClientInitializationError){
+            return res.status(503).json({
+                message: 'Database unavailable, try again later...'
+            })    
+        }
+
+        return res.status(500).json({
+            message: 'Failed to verify room due to an internal server error.'
+        })
+    }
 })
 
 process.on('unhandledRejection', (reason, promise) => {
