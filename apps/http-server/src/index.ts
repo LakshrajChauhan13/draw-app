@@ -3,11 +3,12 @@ import bcrypt from "bcrypt";
 import { client, Prisma } from "@repo/db/client";
 import { safeSignUpSchema, safeSignInSchema, roomSlugSchema, flatten_Error, updateAccessModeSchema } from "@repo/common/types";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET_KEY } from "@repo/backend-common/config";
+import { JWT_SECRET_KEY, REFRESH_JWT_SECRET_KEY } from "@repo/backend-common/config";
 import { userMiddleware } from "./middleware/user.middleware";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { OptionalAuthRequest, optionalUserMiddleware } from "./middleware/optional.user.middleware";
+import { accessTokenOptions, refreshTokenOptions } from "./config/cookie.config";
 
 const app = express();
 app.use(express.json());
@@ -78,21 +79,111 @@ app.post('/signin', async (req, res) => {
         })
     }
 
-    const token = jwt.sign({
+    const accessToken = jwt.sign({
         userId: userFound.id
-    },  JWT_SECRET_KEY, 
-    {
-        expiresIn: "7d"
-    })        
-
-    res.cookie('accessToken', token)
+    }, JWT_SECRET_KEY, { expiresIn: "15m" })        
     
+    const refreshToken = jwt.sign({
+        userId: userFound.id
+    }, REFRESH_JWT_SECRET_KEY, { expiresIn: "7d" })
+
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    const response = await client.user.update({
+        where: {
+            id: userFound.id
+        },
+        data: {
+            refreshToken: hashedRefreshToken
+        }
+    })
+    
+    res.cookie('accessToken', accessToken, accessTokenOptions)
+    res.cookie('refreshToken', refreshToken, refreshTokenOptions)
+
     return res.json({
         message: "User signed in successfully!",
-        token: token
+        token: accessToken,
+        refreshToken: refreshToken
     })
     
 })
+
+app.post('/refresh', async (req, res) => {
+    const { refreshToken } = req.cookies;    
+    if(!refreshToken) {
+        return res.json({ message: "Refresh token not provided! "})
+    }
+
+    try{
+        const decoded = jwt.verify(refreshToken, REFRESH_JWT_SECRET_KEY) as {userId: string}
+        
+        const user = await client.user.findUnique({
+            where: { id: decoded.userId }
+        })
+        
+        if(!user || !user.refreshToken){
+            res.clearCookie('refreshToken', refreshTokenOptions)
+            res.clearCookie('accessToken', accessTokenOptions)
+            return res.status(403).json({
+                message: "Session Revoked. Sign in again!"
+            })
+        }
+
+        const isRefreshTokenValid = await bcrypt.compare(refreshToken, user.refreshToken)
+
+        if(!isRefreshTokenValid){
+            await client.user.update({
+                data: { refreshToken: null },
+                where: { id: user.id }
+            })    
+            res.clearCookie('accessToken', accessTokenOptions)
+            res.clearCookie('refreshToken', refreshTokenOptions)
+            res.status(403).json({
+                message: "Security breach detected. Session terminated."
+            })
+        }
+
+        const newRefreshToken = jwt.sign({ userId: user.id }, REFRESH_JWT_SECRET_KEY, { expiresIn: "7d"});
+        const newAccessToken = jwt.sign({ userId: user.id }, JWT_SECRET_KEY, { expiresIn: "15m"});
+
+        const newHashedRefreshToken = await bcrypt.hash(refreshToken, 10)
+        await client.user.update({
+            data: { refreshToken: newHashedRefreshToken },
+            where: { id: user.id }
+        })
+
+        res.cookie('accessToken', newAccessToken)
+        res.cookie('refreshToken', newRefreshToken)
+        
+        return res.status(200).json({ message: "Token refreshed successfully" })
+    }catch(err){
+        console.error("Error occured while Refreshing the token:", err)
+        res.clearCookie('accessToken', accessTokenOptions)
+        res.clearCookie('refreshToken', refreshTokenOptions)
+        res.status(403).json({ message: "Invalid or expired refresh token. Please sign in again." })
+    }
+})
+
+app.post('/signout', userMiddleware, async(req, res) => {
+    const userId = req.id;
+    try{
+        await client.user.update({
+            data: { refreshToken: null },
+            where: { id: userId }
+        })
+        
+        res.clearCookie('accessToken', accessTokenOptions)
+        res.clearCookie('refreshToken', refreshTokenOptions)
+        
+        res.status(200).json({
+            message: "Signed out successfully."
+        })
+    }catch(err){
+        console.log("Signout error: ", err);
+        res.status(500).json({ message: "Internal Error occured while signing out."});
+    }
+
+} )
 
 app.post('/room', userMiddleware, async (req, res) => {                     // create a room
     const userId = req.id as string;

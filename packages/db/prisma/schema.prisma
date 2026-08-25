@@ -28,6 +28,7 @@ model User{
   photo         String?
   ownedRooms    Room[]
   currentRoom   RoomMember?
+  refreshToken  String? 
 }
 
 model Room{

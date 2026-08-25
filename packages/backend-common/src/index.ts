@@ -1,1 +1,2 @@
 export const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || '123123';
+export const REFRESH_JWT_SECRET_KEY = process.env.REFRESH_JWT_SECRET_KEY || '32145896547852';
