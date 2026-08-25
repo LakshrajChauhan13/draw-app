@@ -51,7 +51,9 @@ const DashBoard = () => {
           <BrandName className='text-accent font-bold text-2xl font-mono' />
 
           <div className='flex justify-center items-center gap-2'>
-            <span className='px-4 py-1.5 bg-muted-foreground/50 rounded-lg text-foreground'>
+            <span className='px-4 py-1.5 border rounded-lg text-sm text-foreground 
+                      "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+            '>
               { username }
             </span>
             <Button className='px-4 py-1.5 ' variant={'destructive'}  >

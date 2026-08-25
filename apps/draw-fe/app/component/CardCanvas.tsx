@@ -97,7 +97,7 @@ const CardCanvas = ({slug, createdAt, id, accessMode}: RoomDataInterface) => {
               handleToggleAccessModeMutation(id, value)
             }}} 
           >
-            <SelectTrigger className={"w-full max-w-48"}>
+            <SelectTrigger className={"w-full max-w-48 border-none font-geist text-xs "}>
               <SelectValue />
             </SelectTrigger>            
             <SelectContent>

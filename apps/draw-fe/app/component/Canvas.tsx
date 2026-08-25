@@ -7,9 +7,10 @@ import { CircleIcon, LineIcon, RectIcon, TriangleIcon } from "@/icons/icons";
 import ToolButton from "./ShapesButton";
 import { toast } from "sonner";
 import { AccessMode } from "./RoomCanvas";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToggleModeAccess } from "../hooks/useToggleAccessModeMutation";
 import { PrivateCanvasPage } from "./PrivateCanvasPage";
+import { ChevronDown } from "lucide-react";
 
 export type ShapeType = "rect" | "line" | "circle" | "triangle";
 
@@ -118,64 +119,69 @@ export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes, ac
             className={`absolute ${isReadOnly ? 'cursor-default' : 'cursor-crosshair'}`}
         />
 
-        <div className="absolute top-4 right-4 z-50">
+        <div className="absolute top-4 right-4 z-50 flex gap-2">
             {admin ? (
                 /* Admin View: Clickable Dropdown Badge */
-                <Select 
-                    value={localAccessMode} 
-                    onValueChange={(value) => {
-                        if(value){
-                            const newMode = value as AccessMode;
-                            toggleAccessModeMutation.mutate({roomId: roomId, accessMode: newMode}, {
-                            onSuccess: () => {
-                                setLocalAccessMode(newMode)
-
-                                sendMessage(JSON.stringify({
-                                    type: "access-mode-update",
-                                    payload: { accessMode: newMode }
-                                }))
-                                console.log(newMode)
-                            }
-                        }
-                    );}
-                    }}
-                    disabled={toggleAccessModeMutation.isPending} 
+            <DropdownMenu>
+                <DropdownMenuTrigger 
+                    disabled={toggleAccessModeMutation.isPending}
+                    className={`group h-8 px-4 py-5 text-sm font-mono tracking-tighter rounded-full border shadow-md flex items-center gap-2 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400 border-dashed transition-all active:scale-95 ${statusBadge.style}`}
                 >
-                    <SelectTrigger 
-                        className={`h-8 px-3 text-xs font-mono rounded-full border shadow-md flex items-center gap-2 backdrop-blur-sm focus:ring-0 focus:ring-offset-0 border-dashed ${statusBadge.style}`}
-                    >
-                        {/* Pulsing Status  */}
-                        <span className="relative flex h-2 w-2 mr-1">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-60"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
-                        </span>
-                        
-                        {toggleAccessModeMutation.isPending ? "Updating..." : <SelectValue />}
-                    </SelectTrigger>            
-                    
-                    <SelectContent align="end">
-                        <SelectGroup>
-                            <SelectLabel className="text-xs">Private Mode</SelectLabel>
-                            <SelectItem value="PRIVATE" className="text-xs cursor-pointer">Private (Only You)</SelectItem>
-                        </SelectGroup>
-                        <SelectSeparator />
-                        <SelectGroup>
-                            <SelectLabel className="text-xs">Public Access</SelectLabel>
-                            <SelectItem value="PUBLIC_VIEW" className="text-xs cursor-pointer">Public (Read-Only)</SelectItem>
-                            <SelectItem value="PUBLIC_EDIT" className="text-xs cursor-pointer">Public (Collaborative)</SelectItem>
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
-            ) : (
-                /* GUEST VIEW: Status badge  */
-                <div className={`px-3 py-1.5 text-xs font-mono rounded-full border shadow-md flex items-center gap-2 backdrop-blur-sm border-dashed ${statusBadge.style}`}>
-                    <span className="relative flex h-2 w-2">
+                    {/* Pulsing Status Dot */}
+                    <span className="relative flex h-2 w-2 mr-1">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-60"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
                     </span>
-                    {statusBadge.text}
-                </div>
-            )}
+                    
+                    {toggleAccessModeMutation.isPending ? "Updating..." : statusBadge.text}
+                    <ChevronDown 
+                        className="w-4 h-4 ml-1 opacity-60 transition-transform group-data-[popup-open]:rotate-180"
+                        aria-hidden="true"
+                    />
+                </DropdownMenuTrigger>            
+            
+                <DropdownMenuContent align="end" className="w-56 font-mono">
+                    <DropdownMenuRadioGroup 
+                        value={localAccessMode} 
+                        onValueChange={(value) => {
+                            const newMode = value as AccessMode;
+                            toggleAccessModeMutation.mutate({ roomId, accessMode: newMode }, {
+                                onSuccess: () => {
+                                    setLocalAccessMode(newMode);
+                                    sendMessage(JSON.stringify({
+                                        type: "access-mode-update",
+                                        payload: { accessMode: newMode }
+                                    }));
+                                }
+                            });
+                        }}
+                    >
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                        Access Mode
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioItem value="PRIVATE" className="text-sm cursor-pointer py-2">
+                        Private (Only You)
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="PUBLIC_VIEW" className="text-sm cursor-pointer py-2">
+                        Public (Read-Only)
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="PUBLIC_EDIT" className="text-sm cursor-pointer py-2">
+                        Public (Edit)
+                    </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+            </DropdownMenu>
+    ) : (
+        /* GUEST VIEW: Read-Only Static Badge */
+        <div className={`h-10 px-4 text-sm font-mono rounded-full border shadow-md flex items-center gap-2 backdrop-blur-sm border-dashed ${statusBadge.style}`}>
+            <span className="relative flex h-2 w-2 mr-1">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-60"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
+            </span>
+            {statusBadge.text}
+        </div>
+    )}
         </div>
         
             <div className="flex gap-2 absolute top-2 left-1/2 -translate-x-1/2 px-4 py-3 bg-neutral-900 rounded shadow-lg">
