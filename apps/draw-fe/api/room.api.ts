@@ -18,6 +18,11 @@ export async function userSignInApi( email: string, password: string ){
     return response.data;
 }
 
+export async function userSignOutApi(){
+    const response = await axiosTnstance.post('/signout')
+    return response.data
+}
+
 export async function createRoomApi(slug: string){
     // const token = localStorage.getItem('token')
     const response = await axiosTnstance.post('/room', {

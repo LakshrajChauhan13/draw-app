@@ -2,12 +2,16 @@
 
 import BrandName from '../component/BrandName'
 import { Button } from '@/components/ui/button'
-import { useQuery } from '@tanstack/react-query'
-import { getAllRoomsApi } from '@/api/room.api'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { getAllRoomsApi, userSignOutApi } from '@/api/room.api'
 import NewCanvasCard from '../component/NewCanvasCard';
 import CardCanvas from '../component/CardCanvas';
 import JoinCanvasCard from '../component/JoinCanvasCard';
 import { AccessMode } from '../component/RoomCanvas';
+import { toast } from 'sonner';
+import { AxiosError } from 'axios';
+import { ErrorMessage } from '@/components/signup-form';
+import { useRouter } from 'next/navigation';
 
 export interface RoomDataInterface{
   id: string,
@@ -23,6 +27,29 @@ const DashBoard = () => {
     queryFn: getAllRoomsApi
   })
   console.log(data)
+  const router = useRouter();
+
+  const signOutMutation = useMutation({
+    mutationFn: userSignOutApi,
+    onMutate: () => {
+      const id = toast.loading('Signing out...')
+      return { id }
+    },
+    onSuccess: (data, variables, context) => {
+      const message = data.message;
+      toast.dismiss(context.id)
+      toast.success(message)
+      console.log(message)
+      router.push('/signin')
+    },
+
+    onError: (error: AxiosError<ErrorMessage>, variables, context) => {
+      const message = error.response?.data.message;
+      console.log("error while signing out :", message);
+      toast.dismiss(context?.id);
+      toast.success(message)
+    }
+  })
   
   if (isLoading) {
     return (
@@ -42,7 +69,7 @@ const DashBoard = () => {
 
   const roomsList: RoomDataInterface[] = data.rooms || [];
   const username = data.user.username || 'Guest';
-  
+    
   return (
     <>
     <div className='min-h-screen flex flex-col selection:bg-muted'>
@@ -56,7 +83,7 @@ const DashBoard = () => {
             '>
               { username }
             </span>
-            <Button className='px-4 py-1.5 ' variant={'destructive'}  >
+            <Button onClick={() => signOutMutation.mutate()} className='px-4 py-1.5 ' variant={'destructive'}  >
               Sign Out
             </Button>
           </div>
