@@ -1,0 +1,22 @@
+name: Deploy to staging
+
+on: 
+  push:
+    branches: 
+      - "dev"
+
+jobs: 
+  redeploy_everything:
+    name: Deploy everything to the staging server/cluster
+
+    steps:
+      - name: SSH Into server
+      - run: |
+          echo ${{ secrets.SSH_PRIVATE_KEY }} &> ~/ssh_key
+          ssh -i ~/ssh_key ubuntu@54.163.32.70
+          cd draw-app && git pull
+          pnpm install
+          pnpm run build
+          pm2 restart draw-fe
+          pm2 restart http-server
+          pm2 restart ws-server
