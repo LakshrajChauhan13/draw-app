@@ -14,6 +14,7 @@ const webSocketContext = createContext<WebSocketContextInterface | null>(null)
 
 const WebSocketContextProvider = ({children} : { children: ReactNode}) => {
     const [token, setToken] = useState<string | null>(null);
+    const WS_BACKEND_URL = process.env.NEXT_PUBLIC_WS_BACKEND_URL || "ws://localhost:8080"
 
     useEffect(() => {
         const getCookie = (name: string): string | null => {
@@ -28,7 +29,7 @@ const WebSocketContextProvider = ({children} : { children: ReactNode}) => {
     }, []);
         
     
-    const { sendMessage, lastMessage, readyState } = useWebSocket( token ? `ws://localhost:8080?token=${token}` : `ws://localhost:8080`, {
+    const { sendMessage, lastMessage, readyState } = useWebSocket( token ? `${WS_BACKEND_URL}?token=${token}` : WS_BACKEND_URL, {
         shouldReconnect: () => true
     })
 

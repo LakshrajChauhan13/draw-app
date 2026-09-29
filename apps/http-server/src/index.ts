@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from "express";
 import bcrypt from "bcrypt";
 import { client, Prisma } from "@repo/db/client";
@@ -15,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({
-    origin: "http://localhost:3002",
+    origin: process.env.FRONTEND_URL || "http://localhost:3002",
     credentials: true
 }))
 
@@ -60,7 +61,7 @@ app.post('/signin', async (req, res) => {
     }
     const {email, password } = parsedBody.data
 
-    const userFound = await client.user.findFirst({
+    const userFound = await client.user.findUnique({
         where: {
             email: email
         }
@@ -102,7 +103,7 @@ app.post('/signin', async (req, res) => {
 
     return res.json({
         message: "User signed in successfully!",
-        token: accessToken,
+        accessToken: accessToken,
         refreshToken: refreshToken
     })
     
@@ -138,7 +139,7 @@ app.post('/refresh', async (req, res) => {
             })    
             res.clearCookie('accessToken', accessTokenOptions)
             res.clearCookie('refreshToken', refreshTokenOptions)
-            res.status(403).json({
+            return res.status(403).json({
                 message: "Security breach detected. Session terminated."
             })
         }

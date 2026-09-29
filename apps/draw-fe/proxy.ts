@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { JWT_SECRET_KEY } from "@repo/backend-common/config";
+// import { JWT_SECRET_KEY } from "@repo/backend-common/config";
 
+const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY
 const encodedJwtSecretKey = new TextEncoder().encode(JWT_SECRET_KEY)
     
 async function isTokenValid(token: string): Promise<boolean> {

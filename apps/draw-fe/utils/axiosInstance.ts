@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const axiosTnstance = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: process.env.NEXT_PUBLIC_HTTP_BACKEND_URL || "http://localhost:3000",
     withCredentials: true
 })
 
