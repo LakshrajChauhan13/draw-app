@@ -23,10 +23,11 @@ export async function userSignOutApi(){
     return response.data
 }
 
-export async function createRoomApi(slug: string){
+export async function createRoomApi(slug: string, description: string){
     // const token = localStorage.getItem('token')
     const response = await axiosTnstance.post('/room', {
         slug: slug,
+        description: description
     });
     return response.data;
 }

@@ -197,18 +197,20 @@ app.post('/room', userMiddleware, async (req, res) => {                     // c
             error: flatten_Error(parsedBody.error).fieldErrors
         })
     }
-    const { slug } = parsedBody.data;
+    const { slug, description } = parsedBody.data;
     try{
         const response = await client.room.create({
             data: {
                 slug: slug,
-                adminId: userId
+                description: description,
+                adminId: userId,
             }
         })
         
         return res.status(201).json({
-            message: `Room created!`,
+            message: "Room created!",
             roomName: slug,
+            roomDescription: description,
             roomId: response.id
         })
 
@@ -288,7 +290,7 @@ app.get('/room/chats/:roomId', optionalUserMiddleware, async (req: OptionalAuthR
             message: "This canvas is private. You must be the owner to view it."    
         })
     }
-``    
+   
     try{
         const chats = await client.chat.findMany({
             where:{
@@ -325,6 +327,7 @@ app.get('/all/rooms', userMiddleware, async (req, res) => {                 // g
         select: {
             id: true,
             slug: true,
+            description: true,
             createdAt: true,
             accessMode: true,
             _count: {

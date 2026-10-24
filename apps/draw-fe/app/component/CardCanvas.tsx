@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToggleModeAccess } from "../hooks/useToggleAccessModeMutation";
 
 
-const CardCanvas = ({slug, createdAt, id, accessMode}: RoomDataInterface) => {
+const CardCanvas = ({slug, description, createdAt, id, accessMode}: RoomDataInterface) => {
     const isoStr = createdAt;
     const date = new Date(isoStr);
     const router = useRouter();
@@ -66,9 +66,8 @@ const CardCanvas = ({slug, createdAt, id, accessMode}: RoomDataInterface) => {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="text-muted-foreground italic ">
-          system designs, approaching the systems with the first fundamentals.
-          Diagrams of the systems.
+        <CardContent className="text-muted-foreground italic break-all">
+          {description}
         </CardContent>
 
         <CardFooter className="opacity-100 group-hover:opacity-0 absolute bottom-0 w-full flex justify-end items-center border-none bg-transparent">
@@ -79,7 +78,7 @@ const CardCanvas = ({slug, createdAt, id, accessMode}: RoomDataInterface) => {
           </Badge>
         </CardFooter>
         
-        <CardFooter className="absolute w-full opacity-0 group-hover:opacity-100 transition-opacity duration-75 bottom-0 flex justify-between items-center gap-2">
+        <CardFooter className="absolute w-full opacity-0 group-hover:opacity-100 group-hover:backdrop-blur-xs transition-opacity duration-75 bottom-0 flex justify-between items-center gap-2">
           <div className="flex justify-start items-center w-full">
             <Button onClick={() => {
               router.push(`/canvas/${id}`)

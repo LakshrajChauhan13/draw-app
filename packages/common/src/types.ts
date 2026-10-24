@@ -25,7 +25,10 @@ export const safeSignInSchema = z.object({
 export const roomSlugSchema = z.object({
     slug: z.string()
         .min(8, "slug should be atleast 8 characters")
-        .max(15, "slug must be under 15 characters")
+        .max(15, "slug must be under 15 characters"),
+    description: z.string()
+        .min(30, "description should be atleast 30 characters")
+        .max(100, "description must be under 100 characters")
 })
 
 export const updateAccessModeSchema = z.object({

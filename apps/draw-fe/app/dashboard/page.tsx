@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 export interface RoomDataInterface{
   id: string,
   slug: string,
+  description: string
   createdAt: string,
   accessMode: AccessMode 
 }
@@ -110,7 +111,16 @@ const DashBoard = () => {
         <div className='grid grid-cols-3 gap-2 mt-5'>
         
         { 
-          roomsList && roomsList.map((roomData) => <CardCanvas key={roomData.id} id={roomData.id} slug={roomData.slug} createdAt={roomData.createdAt} accessMode={roomData.accessMode} /> )  
+          roomsList && roomsList.map((roomData) => 
+            <CardCanvas 
+              key={roomData.id} 
+              id={roomData.id}
+              description={roomData.description} 
+              slug={roomData.slug} 
+              createdAt={roomData.createdAt} 
+              accessMode={roomData.accessMode} 
+            />
+          )  
         }
 
         </div>
