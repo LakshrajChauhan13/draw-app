@@ -6,13 +6,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { ShareIcon } from "lucide-react";
 import { toast } from "sonner";
-import { AlertDialogDelete } from "./AlertDialogDelete";
+import { AlertDialogNew } from "./AlertDialogNew";
 import { useRouter } from "next/navigation";
 import { RoomDataInterface } from "../dashboard/page";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToggleModeAccess } from "../hooks/useToggleAccessModeMutation";
+import { DeleteIcon } from "@/icons/icons";
 
 
 const CardCanvas = ({slug, description, createdAt, id, accessMode}: RoomDataInterface) => {
@@ -59,7 +60,15 @@ const CardCanvas = ({slug, description, createdAt, id, accessMode}: RoomDataInte
         <CardHeader>
           <CardTitle className=" leading-[1.428571] flex justify-between items-center">
             <h1> { slug } </h1>
-            <AlertDialogDelete onClick={() => deleteMutation.mutate(id)} />
+            <AlertDialogNew
+              Trigger={<DeleteIcon />}
+              TriggerButtonStyle="text-red-500/50 group-hover:border-border hover:text-red-500 hover:bg-accent"
+              TriggerButtonVariant="secondary"
+              Title="Delete Room ?"
+              Description="This action cannot be undone. This will permanently delete your room and its data."
+              onClick={() => deleteMutation.mutate(id)}
+              ActionButtonVariant="destructive"
+            />
           </CardTitle>
           <CardDescription className="text-muted-foreground text-xs">
             Created { formattedDate }

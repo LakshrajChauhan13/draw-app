@@ -1,7 +1,6 @@
 "use client";
 
 import BrandName from '../component/BrandName'
-import { Button } from '@/components/ui/button'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { getAllRoomsApi, userSignOutApi } from '@/api/room.api'
 import NewCanvasCard from '../component/NewCanvasCard';
@@ -12,6 +11,7 @@ import { toast } from 'sonner';
 import { AxiosError } from 'axios';
 import { ErrorMessage } from '@/components/signup-form';
 import { useRouter } from 'next/navigation';
+import { AlertDialogNew } from '../component/AlertDialogNew';
 
 export interface RoomDataInterface{
   id: string,
@@ -84,9 +84,16 @@ const DashBoard = () => {
             '>
               { username }
             </span>
-            <Button onClick={() => signOutMutation.mutate()} className='px-4 py-1.5 ' variant={'destructive'}  >
-              Sign Out
-            </Button>
+
+            <AlertDialogNew
+              Trigger={'Sign Out'}
+              TriggerButtonVariant='destructive'
+              TriggerButtonStyle='px-4 py-1.5'
+              Title='Logging out?'
+              Description='Are you sure that you want to log out? :('
+              onClick={() => signOutMutation.mutate()}
+              ActionButtonVariant='destructive'
+            />
           </div>
         </div>        
       </nav>

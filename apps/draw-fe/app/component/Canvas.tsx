@@ -13,6 +13,10 @@ import { PrivateCanvasPage } from "./PrivateCanvasPage";
 import { ChevronDown } from "lucide-react";
 
 export type ShapeType = "rect" | "line" | "circle" | "triangle";
+type toolType = {
+    name: ShapeType,
+    icon: React.ReactNode
+}
 
 export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes, accessMode, admin }: {
     roomId: string;
@@ -30,6 +34,19 @@ export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes, ac
     const [ localAccessMode, setLocalAccessMode] = useState<AccessMode>(accessMode)
     
     const isReadOnly = !admin && localAccessMode === 'PUBLIC_VIEW'
+    const tools: toolType[] = [{
+        name: 'circle',
+        icon: <CircleIcon />
+    }, {
+        name: 'line',
+        icon: <LineIcon />
+    }, { 
+        name: "rect",
+        icon: <RectIcon />
+    }, {
+        name: 'triangle',
+        icon: <TriangleIcon />
+    }]
     
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -185,18 +202,13 @@ export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes, ac
         </div>
         
             <div className="flex gap-2 absolute top-2 left-1/2 -translate-x-1/2 px-4 py-3 bg-neutral-900 rounded shadow-lg">
-                <ToolButton currentTool={currentTool} tool="circle" handleToolChange={handleToolChange} disabled={isReadOnly}>
-                    <CircleIcon />
-                </ToolButton>
-                <ToolButton currentTool={currentTool} tool="line" handleToolChange={handleToolChange} disabled={isReadOnly}>
-                    <LineIcon />
-                </ToolButton>
-                <ToolButton currentTool={currentTool} tool="rect" handleToolChange={handleToolChange} disabled={isReadOnly}>
-                    <RectIcon />
-                </ToolButton>
-                <ToolButton currentTool={currentTool} tool="triangle" handleToolChange={handleToolChange} disabled={isReadOnly}>
-                    <TriangleIcon />
-                </ToolButton>
+            {
+                tools.map((tool, idx) =>   
+                    <ToolButton key={idx} currentTool={currentTool} tool={tool.name} handleToolChange={handleToolChange} disabled={isReadOnly}>
+                        {tool.icon}
+                    </ToolButton> 
+                )
+            }
             </div>
       </div>
     </>
