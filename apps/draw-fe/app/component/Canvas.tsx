@@ -11,6 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadio
 import { useToggleModeAccess } from "../hooks/useToggleAccessModeMutation";
 import { PrivateCanvasPage } from "./PrivateCanvasPage";
 import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 export type ShapeType = "rect" | "line" | "circle" | "triangle";
 type toolType = {
@@ -32,6 +34,7 @@ export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes, ac
     const currentToolRef= useRef<ShapeType>('rect')                                           
     const { toggleAccessModeMutation } = useToggleModeAccess();
     const [ localAccessMode, setLocalAccessMode] = useState<AccessMode>(accessMode)
+    const router = useRouter()
     
     const isReadOnly = !admin && localAccessMode === 'PUBLIC_VIEW'
     const tools: toolType[] = [{
@@ -135,6 +138,14 @@ export function Canvas({ roomId, sendMessage, lastMessage, gotExistingShapes, ac
             height={window.innerHeight} 
             className={`absolute ${isReadOnly ? 'cursor-default' : 'cursor-crosshair'}`}
         />
+        <div className="absolute top-4 left-4 z-50 ">
+            <button 
+                className={'rounded-full bg-red-950/50 text-red-500 backdrop-blur-2xl hover:text-white hover:bg-red-500 text-sm px-3 py-1.5'}
+                onClick={ () => router.push('/dashboard') }
+            >
+                Leave
+            </button>
+        </div>
 
         <div className="absolute top-4 right-4 z-50 flex gap-2">
             {admin ? (
